@@ -1,7 +1,7 @@
 const { User } = require('../models/user.model')
 const errorHandler = require('../utils/error')
 const bcrypt = require('bcryptjs')
-
+const jwt = require('jsonwebtoken')
 
 const authController = {
     signup: async (req, res, next) => {
@@ -15,6 +15,20 @@ const authController = {
         } catch (error) {
             // res.status(500).json(error)
             next(error)
+        }
+    },
+    signIn: async (req, res, next) => {
+        try {
+            const { email, password } = req.body
+            const user = await User.findOne({ email })
+            if (!user) return next(errorHandler(404, "User not found"))
+            const validPassword = bcrypt.compareSync(password, user.password)
+            if (!validPassword) return next(errorHandler(400, "Invalid password"))
+            const token = jwt.sign({ _id: user._id }, process.env.jwt_secret)
+            const { password: pass, ...rest } = user._doc
+            res.cookie('access_token', token, { httpOnly: true }).status(200).json(rest)
+        } catch (error) {
+
         }
     }
 }
